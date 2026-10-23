@@ -3,7 +3,9 @@
 Read this file first in every session. Keep it updated when decisions change.
 
 ## 1. What we are building
-A mobile-first (Android) wuxia story game. The player plays a **chain of characters** across one saga. Each character's final choices become the **inheritance** (grudges, debts, secrets, techniques) that the next character receives. Chinese wuxia theme: grudge and gratitude (恩怨), oaths, sects, martial arts.
+A mobile-first (Android) xianxia story game. The player plays a **chain of characters** across one saga. Each character's final choices become the **inheritance** (grudges, debts, secrets, techniques) that the next character receives.
+
+**Tone (decided):** in the style of the drama The Untamed: cultivation sects, spiritual power and golden cores, the righteous path against the crooked path, resentful energy and spirits, misty mountains, pale sect robes, grudge and gratitude (恩怨), oaths and sworn bonds. Style only: never reuse names, sects, characters or plot from The Untamed or Mo Dao Zu Shi.
 
 Working title: **Jianghu Chain** (江湖鏈). Repo: `inkbound-jianghu`.
 
@@ -15,7 +17,7 @@ Start small. Ship Chapter 1 (about 5 minutes of play), then expand chapter by ch
 - **Distribution:** the owner's private app store (`aman-dhakar-191/private-app-store`), not Google Play. Each version is a GitHub release with one signed APK, made by the `Release` workflow. Rules and setup: `/docs/BUILD.md`. Package name `io.github.amandhakar.jianghuchain` must never change.
 - **Render:** 2D only. Mobile renderer.
 - **Do not** add heavy plugins or C# without asking. Keep the project dependency-light.
-- **Open decisions** (ask the owner, do not assume): final character art style, video format, monetization, project license, whether to bundle fonts, and tone (grounded wuxia vs. The Untamed-style xianxia, see `/docs/DESIGN_NOTES.md`).
+- **Open decisions** (ask the owner, do not assume): final character art style, video format, monetization, project license, whether to bundle fonts, recorded voice acting (who records or which voice service, and its license) versus the phone's text-to-speech.
 
 ## 3. Reference prototype
 A working HTML/canvas prototype lives in `/prototype/jianghu-chain-v2.html`. It is the design reference for story, choices, stats, the duel mechanic and the scroll mechanic. Port the **logic and content**, not the code. Do not edit the prototype.
@@ -26,6 +28,7 @@ A working HTML/canvas prototype lives in `/prototype/jianghu-chain-v2.html`. It 
 3. **Scenes are composed of layers.** Each scene JSON lists a background, parallax layers, characters and effects. (For now a scene names one `backdrop` preset drawn in code by `/game/fx/backdrop.gd`; split it into layers when real art arrives.)
 4. **All player-facing text goes through localization** (`/data/i18n/en.json`, `zh.json`). Never hardcode strings in scripts.
 5. **Save/load** serializes the game state to JSON in `user://`.
+6. **Voice and subtitles.** Story scenes play line by line: each line is voiced and shown as a subtitle; choices appear after the last line. Text entries may name a `speaker` (an id in `/data/voices.json`, which sets the speaker's display name, pitch and rate). `/game/audio/voice.gd` plays a recorded clip at `/assets/audio/voice/<lang>/<i18n key>.ogg` when one exists, otherwise the phone's text-to-speech, otherwise nothing (lines then advance on a reading timer). Recorded voice is an open decision; adding clips needs no code changes.
 
 ## 5. Folder layout
 ```
@@ -39,7 +42,7 @@ A working HTML/canvas prototype lives in `/prototype/jianghu-chain-v2.html`. It 
   /scenes           Godot scenes (.tscn)
   /ui               story panel, choice buttons, stat bar, scroll view
   /fx               rain, mist, slash arcs, sparks, ink-wipe transition
-  /audio            sound manager
+  /audio            voice player (recorded clips or text-to-speech)
 /assets
   /art  /video  /audio  /fonts
 /docs               design notes, story bible
@@ -71,7 +74,7 @@ reputation title, technique, mark/scar, debt or grudge, secret, witness. Reputat
 
 **Reputation ties** break honor > ruth > bond. All zeros gives "The Upright Blade".
 
-**Chapter 1 outline** (Yan Ruo, swordswoman): inn at Pine Ferry -> old man (pour wine / ignore / question) -> bandits burst in, leader Gu Tie (draw sword / offer silver / forged letter) -> chain duel -> aftermath (spare / kill / take jade token) -> the sealed letter (read / deliver / burn) -> scroll written -> Chapter 2 preview with Shen Mo, a ferryman's apprentice, who inherits the scroll.
+**Chapter 1 outline** (Yan Ruo, outer disciple of the Tingyu Pavilion, carrying a sealed jade slip to the Iron Crane Sect): inn at Pine Ferry -> an old man whose shadow falls the wrong way (pour wine / ignore / ask what he is) -> Black Willow cultivators of the crooked path, leader Gu Tie (draw sword / offer spirit stones / forged slip) -> chain duel -> aftermath (spare / kill / take his ghost-binding token) -> the cracked jade slip (read / deliver / burn with a talisman) -> scroll written -> Chapter 2 preview with Shen Mo, a ferryman's apprentice with no spiritual roots, who inherits the scroll. Flag ids keep their prototype names (`letter`, `beggar`, `approach: silver`) so saves and tests stay stable.
 
 ## 7. Art and animation direction
 - **Current phase:** placeholders only (simple silhouettes and shapes). Do not spend time on final art.
@@ -79,7 +82,7 @@ reputation title, technique, mark/scar, debt or grudge, secret, witness. Reputat
 - **Animation approach:** skeletal / cut-out animation (Godot Skeleton2D and AnimationPlayer, or a Spine-style runtime if the owner approves), idle loops, tween-driven moves, particle and shader effects for rain, mist, slashes and sparks.
 - Realistic characters with fluid animation are the most expensive part of this project. Flag any scope risk early. Prefer reusing parts and layers over frame-by-frame animation.
 - **Video:** only for short cinematic moments. Verify which video formats the chosen Godot version plays natively before adding any clip (Godot has historically supported Ogg Theora only). Keep clips short and compressed.
-- Respect reduced-motion and sound-off settings.
+- Respect reduced-motion and sound-off settings. The voice on/off toggle in the top bar is saved in `user://settings.cfg`.
 
 ## 8. UI rules
 - Portrait, one-handed play. Touch targets at least 48dp. Respect safe areas and notches.

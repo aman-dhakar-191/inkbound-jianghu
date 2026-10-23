@@ -2,6 +2,11 @@ extends Control
 ## Plays a chapter from /data. Scene art fills the top of the screen and the
 ## story panel sits below it. The UI is built in code so chapters stay pure
 ## data: this script only knows the scene types "story", "duel" and "scroll".
+##
+## Story scenes play like a film: each line is voiced (game/audio/voice.gd)
+## and shown as a subtitle, one at a time. Tapping the art or the subtitle
+## finishes the line's text, then moves to the next line; Skip jumps to the
+## choices, which appear after the last line.
 
 const GameState := preload("res://game/core/game_state.gd")
 const StoryEngine := preload("res://game/core/story_engine.gd")
@@ -11,6 +16,7 @@ const DataLoader := preload("res://game/core/data_loader.gd")
 const Backdrop := preload("res://game/fx/backdrop.gd")
 const UiTheme := preload("res://game/ui/ui_theme.gd")
 const DuelRing := preload("res://game/ui/duel_ring.gd")
+const Voice := preload("res://game/audio/voice.gd")
 
 ## Only English is complete. zh.json covers UI labels and falls back to English.
 const LANGUAGE := "en"
@@ -20,6 +26,16 @@ const FADE_OUT := 0.35
 const FADE_IN := 0.45
 ## Delay between paragraphs appearing.
 const STAGGER := 0.3
+## Story scenes give more of the screen to the art; subtitles need little room.
+const STORY_ART_SHARE := 0.56
+const TITLE_ART_SHARE := 0.4
+## Subtitle characters revealed per second.
+const REVEAL_SPEED := 45.0
+## Reading speed, in characters per second, for timing lines that aren't voiced.
+const READ_SPEED := 16.0
+## Pause after a voiced line before the next one starts.
+const LINE_PAUSE := 0.5
+const SETTINGS_PATH := "user://settings.cfg"
 
 var strings: Strings
 var engine: StoryEngine
@@ -38,6 +54,20 @@ var _busy := false
 var _appear_count := 0
 var _duel_chain: Label
 var _duel_count: Label
+var _voice: Voice
+var _voice_button: Button
+var _art_share := TITLE_ART_SHARE
+
+# Story scene playback.
+var _lines: Array[Dictionary] = []
+var _line_index := -1
+## Bumped whenever the current line changes, so stale timers do nothing.
+var _line_token := 0
+var _lines_active := false
+var _subtitle_name: Label
+var _subtitle_text: Label
+var _skip_button: Button
+var _reveal_tween: Tween
 
 
 func _ready() -> void:
@@ -48,6 +78,13 @@ func _ready() -> void:
 		table = DataLoader.load_json("res://data/i18n/%s.json" % LANGUAGE)
 	strings = Strings.new(table, en)
 	chapter = DataLoader.load_json(FIRST_CHAPTER)
+	_voice = Voice.new()
+	_voice.language = LANGUAGE
+	var speakers: Dictionary = DataLoader.load_json("res://data/voices.json")
+	_voice.speakers = speakers
+	_voice.line_finished.connect(_on_voice_finished)
+	add_child(_voice)
+	_load_settings()
 	_build_layout()
 	get_viewport().size_changed.connect(_on_resized)
 	_show_title()
@@ -80,10 +117,18 @@ func _build_layout() -> void:
 	_bar_stats.theme_type_variation = "BarStats"
 	_bar_stats.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	bar_row.add_child(_bar_stats)
+	_voice_button = Button.new()
+	_voice_button.theme_type_variation = "QuietButton"
+	_voice_button.custom_minimum_size.y = UiTheme.TOUCH_MIN
+	_voice_button.focus_mode = FOCUS_NONE
+	_voice_button.pressed.connect(_toggle_voice)
+	bar_row.add_child(_voice_button)
+	_update_voice_button()
 	column.add_child(_bar)
 
+	# The art area above the panel: tapping it moves the subtitles on.
 	_spacer = Control.new()
-	_spacer.mouse_filter = MOUSE_FILTER_IGNORE
+	_spacer.gui_input.connect(_on_tap_input)
 	column.add_child(_spacer)
 
 	var panel := PanelContainer.new()
@@ -109,7 +154,7 @@ func _build_layout() -> void:
 func _on_resized() -> void:
 	_apply_safe_area()
 	var view := get_viewport_rect().size
-	var art := view.y * _backdrop.art_share()
+	var art := view.y * _art_share
 	var bar_h := _bar.size.y if _bar.visible else 0.0
 	_spacer.custom_minimum_size.y = maxf(100.0, art - bar_h - _safe_area.get_theme_constant("margin_top"))
 	_backdrop.horizon = art
@@ -155,6 +200,7 @@ func _show_title() -> void:
 	_clear()
 	_backdrop.state = null
 	_backdrop.set_preset("title_peaks")
+	_art_share = TITLE_ART_SHARE
 	_bar.visible = false
 	var glyph := _label(strings.text("title.main"), "TitleGlyph")
 	glyph.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -181,6 +227,7 @@ func _render() -> void:
 	var status := str(scene.get("status", "ui.chapter"))
 	_bar_name.text = "%s  ·  %s" % [strings.text("character." + engine.state.character), strings.text(status, {"n": number})]
 	_bar_stats.text = "" if scene.get("hide_stats", false) else _stats_text()
+	_art_share = STORY_ART_SHARE if engine.scene_type() == "story" else _backdrop.art_share()
 	if not engine.last_delta.is_empty():
 		_label(_delta_text(engine.last_delta), "Delta")
 		engine.last_delta = {}
@@ -197,12 +244,156 @@ func _render() -> void:
 func _render_story(scene: Dictionary) -> void:
 	if scene.has("heading"):
 		_label(_t(str(scene["heading"])), "Heading")
-	for key in engine.paragraphs():
-		_label(_t(key))
+	var box := PanelContainer.new()
+	box.theme_type_variation = "SubtitleBox"
+	box.custom_minimum_size.y = 220
+	box.gui_input.connect(_on_tap_input)
+	var lines_box := VBoxContainer.new()
+	box.add_child(lines_box)
+	_subtitle_name = _make_label("", "SpeakerName")
+	lines_box.add_child(_subtitle_name)
+	_subtitle_text = _make_label("", "Subtitle")
+	lines_box.add_child(_subtitle_text)
+	_content.add_child(box)
+	_lines = engine.lines()
+	_line_index = -1
+	_lines_active = true
+	if _lines.size() > 1:
+		_skip_button = _button(strings.text("ui.skip"), "QuietButton", _finish_lines)
+		_skip_button.size_flags_horizontal = SIZE_SHRINK_END
+	_next_line()
+
+
+## Shows (and voices) the next line, or the choices after the last one.
+func _next_line() -> void:
+	_line_token += 1
+	_line_index += 1
+	if _line_index >= _lines.size():
+		_show_choices()
+		return
+	var line: Dictionary = _lines[_line_index]
+	var text := _show_line(line)
+	var spoken := _voice.say(str(line["key"]), text, str(line["speaker"]))
+	var wait := _reading_time(text)
+	if spoken:
+		# Only a safety net: the voice reporting its end normally moves on first.
+		wait = wait * 2.0 + 3.0
+	get_tree().create_timer(wait).timeout.connect(_on_line_timeout.bind(_line_token))
+
+
+## Puts a line in the subtitle box and starts revealing it. Returns its text.
+func _show_line(line: Dictionary) -> String:
+	var speaker: Dictionary = _voice.speakers.get(str(line["speaker"]), {})
+	_subtitle_name.text = strings.text(str(speaker["name"])) if speaker.has("name") else ""
+	_subtitle_name.visible = _subtitle_name.text != ""
+	var text := _t(str(line["key"]))
+	_subtitle_text.text = text
+	if _reveal_tween != null:
+		_reveal_tween.kill()
+	if _backdrop.reduced_motion:
+		_subtitle_text.visible_ratio = 1.0
+	else:
+		_subtitle_text.visible_ratio = 0.0
+		_reveal_tween = create_tween()
+		_reveal_tween.tween_property(_subtitle_text, "visible_ratio", 1.0, text.length() / REVEAL_SPEED)
+	return text
+
+
+func _reading_time(text: String) -> float:
+	return clampf(text.length() / READ_SPEED, 2.0, 12.0) + 0.6
+
+
+func _on_line_timeout(token: int) -> void:
+	if _lines_active and token == _line_token:
+		_next_line()
+
+
+func _on_voice_finished() -> void:
+	if not _lines_active:
+		return
+	var token := _line_token
+	await get_tree().create_timer(LINE_PAUSE).timeout
+	if _lines_active and token == _line_token:
+		_next_line()
+
+
+func _on_tap_input(event: InputEvent) -> void:
+	var click := event as InputEventMouseButton
+	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
+		_on_tap()
+
+
+## First tap finishes revealing the line; the next one moves on.
+func _on_tap() -> void:
+	if not _lines_active or _busy:
+		return
+	if _reveal_tween != null and _reveal_tween.is_running():
+		_reveal_tween.kill()
+		_subtitle_text.visible_ratio = 1.0
+		return
+	_voice.stop()
+	_next_line()
+
+
+## Skip: stops the voice, shows the last line and the choices.
+func _finish_lines() -> void:
+	if not _lines_active:
+		return
+	_voice.stop()
+	if not _lines.is_empty():
+		_line_index = _lines.size() - 1
+		_show_line(_lines[_line_index])
+	_show_choices()
+
+
+func _show_choices() -> void:
+	_lines_active = false
+	_line_token += 1
+	if _reveal_tween != null:
+		_reveal_tween.kill()
+	if _subtitle_text != null:
+		_subtitle_text.visible_ratio = 1.0
+	if _skip_button != null:
+		_content.remove_child(_skip_button)
+		_skip_button.queue_free()
+		_skip_button = null
+	_appear_count = 0
 	var choices := engine.choices()
 	for i in choices.size():
 		var choice: Dictionary = choices[i]
 		_button(_t(str(choice.get("text", ""))), "ChoiceButton", _on_choice.bind(i))
+	await get_tree().process_frame
+	if _content.get_child_count() > 0:
+		_scroll.ensure_control_visible(_content.get_child(_content.get_child_count() - 1))
+
+
+func _toggle_voice() -> void:
+	_voice.enabled = not _voice.enabled
+	_update_voice_button()
+	_save_settings()
+	if not _voice.enabled and _lines_active and _line_index >= 0 and _line_index < _lines.size():
+		# The line in progress loses its voice: time it like an unvoiced one.
+		_voice.stop()
+		_line_token += 1
+		var text := _t(str(_lines[_line_index]["key"]))
+		get_tree().create_timer(_reading_time(text)).timeout.connect(_on_line_timeout.bind(_line_token))
+
+
+func _update_voice_button() -> void:
+	_voice_button.text = strings.text("ui.voice_on" if _voice.enabled else "ui.voice_off")
+
+
+func _load_settings() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(SETTINGS_PATH) == OK:
+		_voice.enabled = bool(cfg.get_value("audio", "voice", true))
+
+
+func _save_settings() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH)
+	cfg.set_value("audio", "voice", _voice.enabled)
+	cfg.save(SETTINGS_PATH)
 
 
 func _on_choice(index: int) -> void:
@@ -219,7 +410,10 @@ func _choose_and_render(index: int) -> void:
 
 
 func _render_duel(scene: Dictionary) -> void:
-	_label("%s %s" % [_t(engine.resolve(scene.get("intro"))), strings.text("duel.instruction")])
+	var intro_key := engine.resolve(scene.get("intro"))
+	var intro := _t(intro_key)
+	_label("%s %s" % [intro, strings.text("duel.instruction")])
+	_voice.say(intro_key, intro, "narrator")
 	var ring := DuelRing.new()
 	ring.setup(strings)
 	ring.move_picked.connect(_on_move_picked)
@@ -252,18 +446,23 @@ func _finish_duel(sequence: Array) -> void:
 	_backdrop.finish_duel(links)
 	_bar_stats.text = _stats_text()
 	_appear_count = 0
-	_label(strings.text("duel.result.%d" % links), "Heading")
+	var heading := strings.text("duel.result.%d" % links)
+	var form := strings.text("duel.no_form")
 	if links > 0:
-		_label(strings.text("duel.form", {"technique": strings.text("technique." + str(result["technique"]))}))
-	else:
-		_label(strings.text("duel.no_form"))
+		form = strings.text("duel.form", {"technique": strings.text("technique." + str(result["technique"]))})
+	_label(heading, "Heading")
+	_label(form)
+	_voice.say("duel.result.%d" % links, "%s. %s" % [heading, form], "narrator")
 	_button(strings.text("ui.continue"), "PrimaryButton", _transition.bind(_advance_and_render))
 	await get_tree().process_frame
 	_scroll.ensure_control_visible(_content.get_child(_content.get_child_count() - 1))
 
 
 func _render_scroll(scene: Dictionary) -> void:
-	_label(_t(engine.resolve(scene.get("intro"))))
+	var intro_key := engine.resolve(scene.get("intro"))
+	var intro := _t(intro_key)
+	_label(intro)
+	_voice.say(intro_key, "%s %s." % [intro, _t(engine.resolve(scene.get("title")))], "narrator")
 	var sheet := PanelContainer.new()
 	sheet.theme_type_variation = "ScrollSheet"
 	var box := VBoxContainer.new()
@@ -289,6 +488,10 @@ func _advance_and_render() -> void:
 # ---------------------------------------------------------------- widgets
 
 func _clear() -> void:
+	_lines_active = false
+	_line_token += 1
+	_skip_button = null
+	_voice.stop()
 	for child in _content.get_children():
 		_content.remove_child(child)
 		child.queue_free()

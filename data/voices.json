@@ -1,0 +1,7 @@
+{
+  "_comment": "How each speaker sounds with the phone's text-to-speech. pitch and rate are multipliers (1.0 = normal); voice picks among the device's voices for the language, wrapping around. name is the i18n key shown above the subtitle (none for the narrator).",
+  "narrator": {"pitch": 1.0, "rate": 0.95, "voice": 0},
+  "yan_ruo": {"name": "character.yan_ruo", "pitch": 1.15, "rate": 1.0, "voice": 1},
+  "gu_tie": {"name": "character.gu_tie", "pitch": 0.7, "rate": 0.9, "voice": 2},
+  "old_man": {"name": "character.old_man", "pitch": 0.6, "rate": 0.8, "voice": 3}
+}

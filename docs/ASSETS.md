@@ -7,7 +7,10 @@ license before it is committed. The repo is public.
 |---|---|---|---|
 | `icon.svg` | Made for this project | Same as the project | Placeholder |
 
-No fonts, images, audio or video are bundled yet. All scene art is drawn in
+No fonts, images, audio or video are bundled yet. Voices come from the phone's
+text-to-speech at runtime. Recorded voice clips, when added, go in
+`assets/audio/voice/<lang>/<i18n key>.ogg` (Git LFS) and must be listed here
+with who recorded or generated them and under what license. All scene art is drawn in
 code (`game/fx/backdrop.gd`).
 
 Candidates still to check before bundling:
