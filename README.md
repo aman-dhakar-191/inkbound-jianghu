@@ -1,12 +1,12 @@
 # Jianghu Chain (江湖鏈)
 
-A mobile-first wuxia story game for Android, built with Godot 4. You play a
+A mobile-first xianxia story game for Android, in the style of The Untamed, built with Godot 4. You play a
 chain of characters across one saga. Each character's final choices (grudges,
 debts, secrets, a technique) become the inheritance the next character
 receives.
 
 **Status:** Chapter 1 is playable from start to finish with placeholder art:
-the inn at Pine Ferry, the chain duel, the inheritance scroll and a short
+the rain-dark inn at Pine Ferry, the chain duel, the inheritance scroll and a short
 Chapter 2 hook. See `CLAUDE.md` for the full spec and milestones.
 
 ## Run it

@@ -3,7 +3,9 @@
 Read this file first in every session. Keep it updated when decisions change.
 
 ## 1. What we are building
-A mobile-first (Android) wuxia story game. The player plays a **chain of characters** across one saga. Each character's final choices become the **inheritance** (grudges, debts, secrets, techniques) that the next character receives. Chinese wuxia theme: grudge and gratitude (恩怨), oaths, sects, martial arts.
+A mobile-first (Android) xianxia story game. The player plays a **chain of characters** across one saga. Each character's final choices become the **inheritance** (grudges, debts, secrets, techniques) that the next character receives.
+
+**Tone (decided):** in the style of the drama The Untamed: cultivation sects, spiritual power and golden cores, the righteous path against the crooked path, resentful energy and spirits, misty mountains, pale sect robes, grudge and gratitude (恩怨), oaths and sworn bonds. Style only: never reuse names, sects, characters or plot from The Untamed or Mo Dao Zu Shi.
 
 Working title: **Jianghu Chain** (江湖鏈). Repo: `inkbound-jianghu`.
 
@@ -15,7 +17,7 @@ Start small. Ship Chapter 1 (about 5 minutes of play), then expand chapter by ch
 - **Distribution:** the owner's private app store (`aman-dhakar-191/private-app-store`), not Google Play. Each version is a GitHub release with one signed APK, made by the `Release` workflow. Rules and setup: `/docs/BUILD.md`. Package name `io.github.amandhakar.jianghuchain` must never change.
 - **Render:** 2D only. Mobile renderer.
 - **Do not** add heavy plugins or C# without asking. Keep the project dependency-light.
-- **Open decisions** (ask the owner, do not assume): final character art style, video format, monetization, project license, whether to bundle fonts, and tone (grounded wuxia vs. The Untamed-style xianxia, see `/docs/DESIGN_NOTES.md`).
+- **Open decisions** (ask the owner, do not assume): final character art style, video format, monetization, project license, whether to bundle fonts.
 
 ## 3. Reference prototype
 A working HTML/canvas prototype lives in `/prototype/jianghu-chain-v2.html`. It is the design reference for story, choices, stats, the duel mechanic and the scroll mechanic. Port the **logic and content**, not the code. Do not edit the prototype.
@@ -71,7 +73,7 @@ reputation title, technique, mark/scar, debt or grudge, secret, witness. Reputat
 
 **Reputation ties** break honor > ruth > bond. All zeros gives "The Upright Blade".
 
-**Chapter 1 outline** (Yan Ruo, swordswoman): inn at Pine Ferry -> old man (pour wine / ignore / question) -> bandits burst in, leader Gu Tie (draw sword / offer silver / forged letter) -> chain duel -> aftermath (spare / kill / take jade token) -> the sealed letter (read / deliver / burn) -> scroll written -> Chapter 2 preview with Shen Mo, a ferryman's apprentice, who inherits the scroll.
+**Chapter 1 outline** (Yan Ruo, outer disciple of the Tingyu Pavilion, carrying a sealed jade slip to the Iron Crane Sect): inn at Pine Ferry -> an old man whose shadow falls the wrong way (pour wine / ignore / ask what he is) -> Black Willow cultivators of the crooked path, leader Gu Tie (draw sword / offer spirit stones / forged slip) -> chain duel -> aftermath (spare / kill / take his ghost-binding token) -> the cracked jade slip (read / deliver / burn with a talisman) -> scroll written -> Chapter 2 preview with Shen Mo, a ferryman's apprentice with no spiritual roots, who inherits the scroll. Flag ids keep their prototype names (`letter`, `beggar`, `approach: silver`) so saves and tests stay stable.
 
 ## 7. Art and animation direction
 - **Current phase:** placeholders only (simple silhouettes and shapes). Do not spend time on final art.

@@ -26,18 +26,20 @@ affect the result, so a player who reads it always gets 2 links. Decide whether
 the duel is a short action beat (fine as is) or a skill test (needs an opponent
 read, a timer, or a hidden cycle per opponent).
 
-## Tone: wuxia or xianxia?
+## Tone: Untamed-style xianxia (decided)
 
-The owner mentioned The Untamed (陈情令) as a style reference. That drama is
-xianxia: cultivation sects, spirits and resentful ghosts, music as a weapon
-(guqin, dizi), swords that fly, sect robes and forehead ribbons. The current
-spec and Chapter 1 are grounded wuxia: inns, bandits, sabres, letters.
-
-The placeholder art leans toward that look (misty peaks, pale robes, the title
-figure's forehead ribbon and long hair). The story text is unchanged from the
-prototype. Open question for the owner: keep Chapter 1 grounded and grow
-toward the supernatural later, or rewrite it as xianxia now. The inheritance
-chain works for either.
+The owner chose The Untamed (陈情令) as the style reference. Chapter 1 was
+rewritten to match: Yan Ruo is an outer disciple of the Tingyu Pavilion, the
+letter is a sealed jade slip, Gu Tie's Black Willow cultivators walk the
+crooked path with resentful energy, and the old man at Pine Ferry is hinted
+to be something other than a man. Stats, choices, effects and flags are
+unchanged from the prototype.
 
 Use the style only. Do not reuse names, sects or plot from The Untamed or the
-novel it adapts (Mo Dao Zu Shi); both are copyrighted.
+novel it adapts (Mo Dao Zu Shi); both are copyrighted. All names in this game
+(Tingyu Pavilion, Iron Crane Sect, Black Willow, Pine Ferry) are original or
+from the prototype.
+
+Ideas for later chapters: the old man's true nature, music cultivation
+(guqin, dizi) as a duel style, sword flying for travel scenes, a sworn-brother
+bond that carries across the chain.
