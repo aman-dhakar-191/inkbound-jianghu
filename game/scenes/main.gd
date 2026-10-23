@@ -85,6 +85,11 @@ func _ready() -> void:
 	_voice.line_finished.connect(_on_voice_finished)
 	add_child(_voice)
 	_load_settings()
+	if _voice.crashed_last_time:
+		# Speech crashed the game last time: stay on subtitles until the player
+		# turns voice back on in the top bar.
+		_voice.enabled = false
+		_save_settings()
 	_build_layout()
 	get_viewport().size_changed.connect(_on_resized)
 	_show_title()
