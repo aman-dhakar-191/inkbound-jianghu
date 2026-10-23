@@ -12,9 +12,10 @@ Start small. Ship Chapter 1 (about 5 minutes of play), then expand chapter by ch
 ## 2. Tech decisions
 - **Engine:** Godot 4.x (latest stable), GDScript. Chosen for Android export, 2D skeletal animation, shaders and long-term expansion.
 - **Target:** Android, portrait, phone first. Also runs on desktop for testing.
+- **Distribution:** the owner's private app store (`aman-dhakar-191/private-app-store`), not Google Play. Each version is a GitHub release with one signed APK, made by the `Release` workflow. Rules and setup: `/docs/BUILD.md`. Package name `io.github.amandhakar.jianghuchain` must never change.
 - **Render:** 2D only. Mobile renderer.
 - **Do not** add heavy plugins or C# without asking. Keep the project dependency-light.
-- **Open decisions** (ask the owner, do not assume): final character art style, video format, monetization, Play Store release plan, project license, whether to bundle fonts, and tone (grounded wuxia vs. The Untamed-style xianxia, see `/docs/DESIGN_NOTES.md`).
+- **Open decisions** (ask the owner, do not assume): final character art style, video format, monetization, project license, whether to bundle fonts, and tone (grounded wuxia vs. The Untamed-style xianxia, see `/docs/DESIGN_NOTES.md`).
 
 ## 3. Reference prototype
 A working HTML/canvas prototype lives in `/prototype/jianghu-chain-v2.html`. It is the design reference for story, choices, stats, the duel mechanic and the scroll mechanic. Port the **logic and content**, not the code. Do not edit the prototype.
@@ -44,6 +45,8 @@ A working HTML/canvas prototype lives in `/prototype/jianghu-chain-v2.html`. It 
 /docs               design notes, story bible
 /tests              unit tests for core logic
 /tools              data validator (Python, runs without Godot)
+/scripts            release version script (shared with the app store repo)
+/.github            CI (tests, test APK) and Release (signed APK) workflows
 ```
 
 Chapter JSON format: see the header comment in `/game/core/story_engine.gd`. Text entries are i18n keys, `$reputation` / `$technique`, or `{"by": fact, "cases": {...}}` lookups.
@@ -89,6 +92,8 @@ reputation title, technique, mark/scar, debt or grudge, secret, witness. Reputat
 - Run tests for `/game/core` after changing logic. Add a test for every new rule.
   - `godot --headless --path . -s res://tests/test_core.gd` (plain SceneTree script, no test plugin)
   - `python3 tools/validate_data.py` after changing anything in `/data`
+  - `godot --headless --path . -s res://tests/test_playthrough.gd` after UI changes (clicks through Chapter 1)
+  - CI runs all of these on every pull request and fails on any Godot script error.
 - Never commit secrets, keystores or signing keys. Keep `.gitignore` current.
 - Large binary assets (video, audio, big images) use **Git LFS**.
 - The repo is **public**. Only commit assets we have the rights to. Record every asset's source and license in `/docs/ASSETS.md`.
@@ -103,7 +108,7 @@ reputation title, technique, mark/scar, debt or grudge, secret, witness. Reputat
 4. **M3:** Placeholder animated scenes (parallax, rain, mist, lantern), ink-wipe transition, sound manager.
 5. **M4:** Chain duel mini-game with placeholder fighters, slash and spark effects.
 6. **M5:** Inheritance scroll screen and Chapter 2 hook. Save/load.
-7. **M6:** First Android export, tested on a real device. Document the build steps in `/docs/BUILD.md`.
+7. **M6:** First Android export, tested on a real device, released through the private app store. Build steps are in `/docs/BUILD.md`.
 8. **M7:** Decide final art style, then replace placeholders.
 
 ## 11. Out of scope for now

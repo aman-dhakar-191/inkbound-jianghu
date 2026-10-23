@@ -6,6 +6,7 @@
 
 # Builds
 /build/
+/dist/
 *.apk
 *.aab
 *.pck

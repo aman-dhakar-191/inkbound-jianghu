@@ -38,6 +38,20 @@ playthrough and report which reputation each path earns:
 python3 tools/validate_data.py
 ```
 
+A scripted playthrough clicks through all of Chapter 1 in the real UI:
+
+```sh
+godot --headless --path . -s res://tests/test_playthrough.gd
+```
+
+CI runs all of the above on every pull request.
+
+## Release
+
+The game is installed through the private app store, from this repo's GitHub
+releases. Run **Actions → Release → Run workflow** on `main`. One-time signing
+key setup and the store's rules are in [`docs/BUILD.md`](docs/BUILD.md).
+
 ## Layout
 
 ```
@@ -49,7 +63,8 @@ game/ui/     theme and duel ring
 game/fx/     placeholder scene art drawn in code
 tests/       core unit tests
 tools/       data validator
-docs/        design notes, asset licenses
+scripts/     release version script
+docs/        build and release, design notes, asset licenses
 ```
 
 Adding a chapter means adding a JSON file under `data/chapters/` and its text
