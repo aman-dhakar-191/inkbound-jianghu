@@ -20,10 +20,17 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# Pretend the last session crashed while text-to-speech was starting.
+	var guard := FileAccess.open("user://tts_guard", FileAccess.WRITE)
+	guard.store_string("speaking")
+	guard.close()
+
 	_main = load("res://game/scenes/main.tscn").instantiate()
 	root.add_child(_main)
 	await _wait(0.5)
 	_check(_main.engine == null, "starts on the title screen")
+	_check(not _main._voice.enabled, "a crash during speech last time turns voice off")
+	_check(not FileAccess.file_exists("user://tts_guard"), "the crash guard is cleared on start")
 
 	_press_last()
 	await _wait(SCENE_WAIT)
