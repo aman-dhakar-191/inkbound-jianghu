@@ -1,0 +1,81 @@
+name: Set up Godot
+description: >
+  Puts the Godot editor on PATH (it runs headless for tests and exports).
+  With android=true it also installs the export templates and points Godot at
+  the runner's Android SDK, Java and a throwaway debug keystore.
+
+inputs:
+  version:
+    description: Godot version without the "-stable" suffix, e.g. 4.4.1
+    default: "4.4.1"
+  android:
+    description: Also set up Android export
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Download Godot
+      shell: bash
+      env:
+        GODOT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+        mkdir -p "$RUNNER_TEMP/godot"
+        cd "$RUNNER_TEMP/godot"
+        curl -fsSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+        unzip -q godot.zip
+        mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+        chmod +x godot
+        echo "$RUNNER_TEMP/godot" >> "$GITHUB_PATH"
+
+    - name: Cache export templates
+      if: inputs.android == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/share/godot/export_templates/${{ inputs.version }}.stable
+        key: godot-templates-${{ inputs.version }}
+
+    - name: Set up Android export
+      if: inputs.android == 'true'
+      shell: bash
+      env:
+        GODOT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        dest="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+        if [ ! -f "$dest/android_release.apk" ]; then
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          mkdir -p "$dest"
+          mv templates/* "$dest/"
+          rm -rf templates templates.tpz
+        fi
+
+        # Debug exports need a debug keystore. Release signing uses the
+        # GODOT_ANDROID_KEYSTORE_RELEASE_* variables set by the Release workflow.
+        keytool -genkeypair -keystore "$RUNNER_TEMP/debug.keystore" -alias androiddebugkey \
+          -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+          -dname "CN=Android Debug,O=Android,C=US" >/dev/null 2>&1
+
+        # Godot names its settings file after the major (4.0-4.2) or
+        # major.minor (4.3+) version; write both.
+        sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+        settings="$HOME/.config/godot"
+        mkdir -p "$settings"
+        minor="$(echo "$GODOT_VERSION" | cut -d. -f1-2)"
+        for name in editor_settings-4.tres "editor_settings-${minor}.tres"; do
+          cat > "$settings/$name" <<EOF
+        [gd_resource type="EditorSettings" format=3]
+
+        [resource]
+        export/android/android_sdk_path = "$sdk"
+        export/android/java_sdk_path = "$JAVA_HOME"
+        export/android/debug_keystore = "$RUNNER_TEMP/debug.keystore"
+        export/android/debug_keystore_user = "androiddebugkey"
+        export/android/debug_keystore_pass = "android"
+        EOF
+        done
