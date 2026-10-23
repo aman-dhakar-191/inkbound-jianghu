@@ -1,0 +1,25 @@
+# Godot
+.godot/
+/android/
+*.translation
+*.import.tmp
+
+# Builds
+/build/
+*.apk
+*.aab
+*.pck
+
+# Signing keys and credentials: never commit these
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+export_credentials.cfg
+.env
+
+# Tools and OS
+__pycache__/
+.DS_Store
+Thumbs.db
