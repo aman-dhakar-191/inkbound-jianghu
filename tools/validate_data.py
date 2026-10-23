@@ -6,6 +6,7 @@
 - every zh.json key exists in en.json with the same {placeholders}
 - every playthrough (all choices x all duel results) resolves each
   {"by": ...} lookup to a case, and reports the reputation spread
+- every "speaker" has an entry in voices.json, with a name in en.json
 
 Run: python3 tools/validate_data.py
 Exits non-zero on any error.
@@ -23,7 +24,8 @@ STATS = ("honor", "ruth", "bond")
 # Keys the code builds at runtime instead of reading from chapter JSON.
 CODE_KEYS = (
     ["title.main", "title.en", "title.sub", "ui.begin", "ui.continue", "ui.chapter", "ui.move_count",
-     "duel.instruction", "duel.rule", "duel.form", "duel.no_form", "scroll.seal"]
+     "duel.instruction", "duel.rule", "duel.form", "duel.no_form", "scroll.seal",
+     "ui.skip", "ui.voice_on", "ui.voice_off"]
     + [f"stat.{s}" for s in STATS] + [f"stat.{s}.glyph" for s in STATS]
     + [f"duel.move.{m}" for m in ("willow", "crane", "step", "water")]
     + [f"duel.move.{m}.glyph" for m in ("willow", "crane", "step", "water")]
@@ -89,6 +91,8 @@ def case_key(v):
 
 
 def resolve(entry, state, where):
+    if isinstance(entry, dict) and "key" in entry:
+        return resolve(entry["key"], state, where)
     if isinstance(entry, dict):
         value = case_key(lookup(state, entry.get("by", "")))
         if value in entry.get("cases", {}):
@@ -144,7 +148,18 @@ def play(chapter, en, picks, duel_links):
     return state
 
 
-def check_chapter(path, en):
+def speakers_of(node):
+    if isinstance(node, dict):
+        if "speaker" in node:
+            yield node["speaker"]
+        for v in node.values():
+            yield from speakers_of(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from speakers_of(v)
+
+
+def check_chapter(path, en, voices):
     chapter = json.loads(path.read_text(encoding="utf-8"))
     cid, scenes = chapter["id"], chapter["scenes"]
     if chapter["start"] not in scenes:
@@ -175,6 +190,9 @@ def check_chapter(path, en):
     for key in text_keys(chapter):
         if key not in en:
             err(f"{cid}: key '{key}' missing from en.json")
+    for speaker in set(speakers_of(chapter)):
+        if speaker not in voices:
+            err(f"{cid}: speaker '{speaker}' missing from voices.json")
 
     choice_scenes = [s for s in scenes.values() if s.get("type", "story") == "story" and len(s.get("choices", [])) > 1]
     reps = Counter()
@@ -202,8 +220,15 @@ def main():
                 err(f"{lang.name}: '{key}' not in en.json")
             elif placeholders(value) != placeholders(en[key]):
                 err(f"{lang.name}: '{key}' placeholders differ from en.json")
+    voices = json.loads((DATA / "voices.json").read_text(encoding="utf-8"))
+    voices = {k: v for k, v in voices.items() if not k.startswith("_")}
+    if "narrator" not in voices:
+        err("voices.json: missing 'narrator'")
+    for speaker, v in voices.items():
+        if speaker != "narrator" and v.get("name") not in en:
+            err(f"voices.json: name of '{speaker}' missing from en.json")
     for path in sorted((DATA / "chapters").glob("*.json")):
-        check_chapter(path, en)
+        check_chapter(path, en, voices)
     for path in sorted((DATA / "characters").glob("*.json")):
         char = json.loads(path.read_text(encoding="utf-8"))
         if char.get("name") not in en:

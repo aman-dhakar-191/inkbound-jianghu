@@ -8,6 +8,9 @@ extends RefCounted
 ##   {"by": "beggar", "cases": {...}, "default": "..."}
 ##                                          a key picked by a flag, stat,
 ##                                          "links" or "technique"
+##   {"key": "ch1.bandits.p3"}             a plain key in object form
+## Either object form can carry "speaker": a voices.json id. Lines without
+## one are spoken by the narrator.
 
 const GameState := preload("res://game/core/game_state.gd")
 const DuelRules := preload("res://game/core/duel_rules.gd")
@@ -38,6 +41,8 @@ func scene_type() -> String:
 func resolve(entry: Variant) -> String:
 	if entry == null:
 		return ""
+	if entry is Dictionary and entry.has("key"):
+		return resolve(entry["key"])
 	if entry is Dictionary:
 		var cases: Dictionary = entry.get("cases", {})
 		var value := _case_key(state.lookup(str(entry.get("by", ""))))
@@ -51,12 +56,25 @@ func resolve(entry: Variant) -> String:
 	return key
 
 
-func paragraphs() -> Array[String]:
-	var out: Array[String] = []
+## The current scene's text as spoken lines: {"key": i18n key, "speaker": id}.
+func lines() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	for entry in scene().get("text", []):
 		var key := resolve(entry)
-		if key != "":
-			out.append(key)
+		if key == "":
+			continue
+		var speaker := "narrator"
+		if entry is Dictionary:
+			speaker = str(entry.get("speaker", "narrator"))
+		out.append({"key": key, "speaker": speaker})
+	return out
+
+
+## Just the keys of lines().
+func paragraphs() -> Array[String]:
+	var out: Array[String] = []
+	for line in lines():
+		out.append(line["key"])
 	return out
 
 

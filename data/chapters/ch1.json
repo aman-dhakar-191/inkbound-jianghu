@@ -23,8 +23,16 @@
           "cold": "ch1.bandits.beggar_cold",
           "tested": "ch1.bandits.beggar_tested"
         }},
+        {"by": "beggar", "speaker": "old_man", "default": "", "cases": {
+          "friend": "ch1.bandits.beggar_friend_says",
+          "tested": "ch1.bandits.beggar_tested_says"
+        }},
+        {"by": "beggar", "default": "", "cases": {
+          "friend": "ch1.bandits.beggar_friend_after",
+          "tested": "ch1.bandits.beggar_tested_after"
+        }},
         "ch1.bandits.p2",
-        "ch1.bandits.p3"
+        {"key": "ch1.bandits.p3", "speaker": "gu_tie"}
       ],
       "choices": [
         {"text": "ch1.bandits.c_sword", "effects": {"honor": 1}, "set": {"approach": "sword"}, "next": "duel"},

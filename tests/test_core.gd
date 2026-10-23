@@ -23,6 +23,7 @@ func _init() -> void:
 	_test_upright_playthrough()
 	_test_faithful_playthrough()
 	_test_broken_duel_playthrough()
+	_test_speaker_lines()
 	print("%d checks, %d failed" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
 
@@ -185,3 +186,19 @@ func _test_broken_duel_playthrough() -> void:
 	var fields: Array = e.scene()["fields"]
 	_eq(e.resolve(fields[0]["value"]), "technique.stumbling_form", "fallback technique on the scroll")
 	_eq(e.resolve(fields[1]["value"]), "scroll.mark.wound", "wound on the scroll")
+
+
+func _test_speaker_lines() -> void:
+	var e := _engine()
+	_pick(e, "ch1.ferry.c_pour")
+	var lines := e.lines()
+	_eq(lines.size(), 5, "kind old man has narration, a spoken line and an aside")
+	_eq(lines[0]["speaker"], "narrator", "lines default to the narrator")
+	_eq(lines[1]["key"], "ch1.bandits.beggar_friend_says", "old man's words follow the wine")
+	_eq(lines[1]["speaker"], "old_man", "old man speaks his own line")
+	_eq(lines[4]["key"], "ch1.bandits.p3", "object-form key resolves")
+	_eq(lines[4]["speaker"], "gu_tie", "Gu Tie speaks his threat")
+
+	e = _engine()
+	_pick(e, "ch1.ferry.c_ignore")
+	_eq(e.lines().size(), 3, "ignored old man says nothing; empty cases are skipped")
