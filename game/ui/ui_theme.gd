@@ -34,11 +34,16 @@ static func build() -> Theme:
 	_label(t, "ScrollTitle", 48, INK)
 	_label(t, "FieldLabel", 22, SOFT)
 	_label(t, "ScrollSeal", 44, SEAL)
+	_label(t, "SpeakerName", 26, SECT_BLUE)
+	_label(t, "Subtitle", 34, INK)
 
 	t.set_type_variation("StoryPanel", "PanelContainer")
 	t.set_stylebox("panel", "StoryPanel", _box(Color(PAPER, 0.96), Color.TRANSPARENT, 0, [40, 28, 40, 80]))
 	t.set_type_variation("TopBar", "PanelContainer")
 	t.set_stylebox("panel", "TopBar", _box(Color(PAPER, 0.92), LINE, 2, [22, 10, 22, 10]))
+	# Holds the current subtitle; a tap target, so it keeps a fixed minimum height.
+	t.set_type_variation("SubtitleBox", "PanelContainer")
+	t.set_stylebox("panel", "SubtitleBox", _box(Color.TRANSPARENT, Color.TRANSPARENT, 0, [0, 8, 0, 8]))
 	t.set_type_variation("ScrollSheet", "PanelContainer")
 	t.set_stylebox("panel", "ScrollSheet", _box(PARCHMENT, LINE, 2, [36, 30, 36, 34]))
 
@@ -48,6 +53,9 @@ static func build() -> Theme:
 	_button(t, "ChoiceButton", choice, TINT, INK)
 
 	_button(t, "PrimaryButton", _box(INK, Color.TRANSPARENT, 0, [40, 22, 40, 22]), Color(INK, 0.85), PAPER)
+
+	_button(t, "QuietButton", _box(Color.TRANSPARENT, Color.TRANSPARENT, 0, [16, 8, 16, 8]), TINT, SOFT)
+	t.set_font_size("font_size", "QuietButton", 26)
 
 	var move := _box(PAPER, INK, 3, [4, 4, 4, 4])
 	move.set_corner_radius_all(66)

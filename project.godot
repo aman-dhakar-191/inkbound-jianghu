@@ -6,10 +6,14 @@ config_version=5
 [application]
 
 config/name="Jianghu Chain"
-config/description="A wuxia story game. Each hero's final choices become the next hero's inheritance."
+config/description="A xianxia story game. Each hero's final choices become the next hero's inheritance."
 run/main_scene="res://game/scenes/main.tscn"
 config/features=PackedStringArray("4.3", "Mobile")
 config/icon="res://icon.svg"
+
+[audio]
+
+general/text_to_speech=true
 
 [display]
 

@@ -28,10 +28,17 @@ func _run() -> void:
 	_press_last()
 	await _wait(SCENE_WAIT)
 	_expect_scene("ferry")
+	_check(_buttons("ChoiceButton").is_empty(), "choices wait until the lines are done")
+	_main._on_tap()
+	_main._on_tap()
+	_check(_main._line_index == 1, "tapping finishes the line, then moves to the next")
+	await _skip_lines()
 
 	_press_choice(0)
 	await _wait(SCENE_WAIT)
 	_expect_scene("bandits")
+	await _skip_lines()
+	_check(_main._subtitle_name.text == "Gu Tie", "Gu Tie's line shows his name")
 
 	_press_choice(0)
 	await _wait(SCENE_WAIT)
@@ -49,10 +56,15 @@ func _run() -> void:
 	_press_last()
 	await _wait(SCENE_WAIT)
 	_expect_scene("aftermath")
+	await _skip_lines()
 
 	_press_choice(0)
 	await _wait(SCENE_WAIT)
 	_expect_scene("letter")
+	# A one-line scene: no Skip button. Without a voice (as in CI) the line ends
+	# after its reading time, at most 12.6 seconds (main.gd _reading_time).
+	await _wait(12.5)
+	_check(not _buttons("ChoiceButton").is_empty(), "choices appear after the last line ends")
 
 	_press_choice(1)
 	await _wait(SCENE_WAIT)
@@ -61,6 +73,7 @@ func _run() -> void:
 	_press_last()
 	await _wait(SCENE_WAIT)
 	_expect_scene("epilogue")
+	await _skip_lines()
 
 	_press_choice(0)
 	await _wait(SCENE_WAIT)
@@ -68,6 +81,15 @@ func _run() -> void:
 
 	print("%d checks, %d failed" % [_checks, _failures])
 	quit(1 if _failures > 0 else 0)
+
+
+## Presses Skip, which shows the last line and the choices.
+func _skip_lines() -> void:
+	var skip := _buttons("QuietButton")
+	_check(not skip.is_empty(), "skip button exists")
+	if not skip.is_empty():
+		skip[0].pressed.emit()
+	await _wait(0.1)
 
 
 func _wait(seconds: float) -> void:
