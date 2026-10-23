@@ -1,0 +1,7 @@
+{
+  "id": "shen_mo",
+  "name": "character.shen_mo",
+  "role": "ferryman's apprentice",
+  "chapter": 2,
+  "inherits_from": "yan_ruo"
+}

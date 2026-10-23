@@ -1,0 +1,130 @@
+{
+  "id": "ch1",
+  "number": 1,
+  "character": "yan_ruo",
+  "start": "ferry",
+  "scenes": {
+    "ferry": {
+      "type": "story",
+      "backdrop": "inn_rain",
+      "text": ["ch1.ferry.p1", "ch1.ferry.p2"],
+      "choices": [
+        {"text": "ch1.ferry.c_pour", "effects": {"honor": 1, "bond": 1}, "set": {"beggar": "friend"}, "next": "bandits"},
+        {"text": "ch1.ferry.c_ignore", "effects": {}, "set": {"beggar": "cold"}, "next": "bandits"},
+        {"text": "ch1.ferry.c_question", "effects": {"ruth": 1}, "set": {"beggar": "tested"}, "next": "bandits"}
+      ]
+    },
+    "bandits": {
+      "type": "story",
+      "backdrop": "inn_bandits",
+      "text": [
+        {"by": "beggar", "cases": {
+          "friend": "ch1.bandits.beggar_friend",
+          "cold": "ch1.bandits.beggar_cold",
+          "tested": "ch1.bandits.beggar_tested"
+        }},
+        "ch1.bandits.p2",
+        "ch1.bandits.p3"
+      ],
+      "choices": [
+        {"text": "ch1.bandits.c_sword", "effects": {"honor": 1}, "set": {"approach": "sword"}, "next": "duel"},
+        {"text": "ch1.bandits.c_silver", "effects": {"honor": -1}, "set": {"approach": "silver"}, "next": "duel"},
+        {"text": "ch1.bandits.c_decoy", "effects": {"ruth": 1}, "set": {"approach": "decoy"}, "next": "duel"}
+      ]
+    },
+    "duel": {
+      "type": "duel",
+      "backdrop": "duel",
+      "intro": {"by": "approach", "default": "ch1.duel.intro_sword", "cases": {
+        "sword": "ch1.duel.intro_sword",
+        "silver": "ch1.duel.intro_silver",
+        "decoy": "ch1.duel.intro_decoy"
+      }},
+      "next": "aftermath"
+    },
+    "aftermath": {
+      "type": "story",
+      "backdrop": "inn_after",
+      "text": [
+        {"by": "links", "cases": {
+          "2": "ch1.after.links_2",
+          "1": "ch1.after.links_1",
+          "0": "ch1.after.links_0"
+        }},
+        "ch1.after.p2"
+      ],
+      "choices": [
+        {"text": "ch1.after.c_spare", "effects": {"honor": 1, "bond": 1}, "set": {"gu": "spared"}, "next": "letter"},
+        {"text": "ch1.after.c_kill", "effects": {"ruth": 2}, "set": {"gu": "killed"}, "next": "letter"},
+        {"text": "ch1.after.c_token", "effects": {"ruth": 1}, "set": {"gu": "token"}, "next": "letter"}
+      ]
+    },
+    "letter": {
+      "type": "story",
+      "backdrop": "river_dawn",
+      "text": ["ch1.letter.p1"],
+      "choices": [
+        {"text": "ch1.letter.c_read", "effects": {"honor": -1}, "set": {"letter": "read"}, "next": "scroll"},
+        {"text": "ch1.letter.c_deliver", "effects": {"honor": 1}, "set": {"letter": "sealed"}, "next": "scroll"},
+        {"text": "ch1.letter.c_burn", "effects": {"ruth": 1, "bond": -1}, "set": {"letter": "burned"}, "next": "scroll"}
+      ]
+    },
+    "scroll": {
+      "type": "scroll",
+      "backdrop": "river_depart",
+      "status": "ui.chapter_complete",
+      "intro": "ch1.scroll.intro",
+      "title": "$reputation",
+      "fields": [
+        {"label": "scroll.label.technique", "value": "$technique"},
+        {"label": "scroll.label.mark", "value": {"by": "wound", "cases": {
+          "true": "scroll.mark.wound",
+          "false": "scroll.mark.clean"
+        }}},
+        {"label": "scroll.label.debt", "value": {"by": "gu", "cases": {
+          "spared": "ch1.debt.spared",
+          "killed": "ch1.debt.killed",
+          "token": "ch1.debt.token"
+        }}},
+        {"label": "scroll.label.secret", "value": {"by": "letter", "cases": {
+          "read": "ch1.secret.read",
+          "sealed": "ch1.secret.sealed",
+          "burned": "ch1.secret.burned"
+        }}},
+        {"label": "scroll.label.witness", "value": {"by": "beggar", "cases": {
+          "friend": "ch1.witness.friend",
+          "cold": "ch1.witness.cold",
+          "tested": "ch1.witness.tested"
+        }}}
+      ],
+      "button": "ui.pass_scroll",
+      "next": "epilogue"
+    },
+    "epilogue": {
+      "type": "story",
+      "backdrop": "ferry_day",
+      "character": "shen_mo",
+      "chapter_number": 2,
+      "hide_stats": true,
+      "heading": "ch1.epilogue.heading",
+      "text": [
+        "ch1.epilogue.p1",
+        {"by": "gu", "cases": {
+          "spared": "ch1.epilogue.gu_spared",
+          "killed": "ch1.epilogue.gu_killed",
+          "token": "ch1.epilogue.gu_token"
+        }},
+        {"by": "letter", "cases": {
+          "read": "ch1.secret.read",
+          "sealed": "ch1.secret.sealed",
+          "burned": "ch1.secret.burned"
+        }},
+        "ch1.epilogue.technique",
+        "ch1.epilogue.unbuilt"
+      ],
+      "choices": [
+        {"text": "ui.play_again", "action": "restart"}
+      ]
+    }
+  }
+}

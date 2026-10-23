@@ -1,0 +1,126 @@
+name: Release
+
+# Actions -> Release -> Run workflow, pick patch / minor / major.
+# Works out the next version from the latest vX.Y.Z tag, exports a signed APK
+# with Godot and publishes it as a GitHub release (which also creates the tag).
+# The private app store picks it up from there: see
+# https://github.com/aman-dhakar-191/private-app-store/blob/main/docs/publishing-an-app.md
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Which part of the version to increase"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      notes:
+        description: "Optional: what changed (GitHub's auto-generated notes are added below)"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+    steps:
+      - name: Only release from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run this workflow on the main branch."
+          exit 1
+
+      - name: Require signing key
+        if: env.KEYSTORE_BASE64 == ''
+        run: |
+          echo "::error::Add the KEYSTORE_BASE64, KEYSTORE_PASSWORD and KEY_ALIAS secrets first. See docs/BUILD.md."
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # all tags, to find the latest version
+
+      - name: Work out the version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          NEXT="$(scripts/next-version.sh "$BUMP")"
+          read -r VERSION CODE <<<"$NEXT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$VERSION (versionCode $CODE)"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: ./.github/actions/setup-godot
+        with:
+          android: "true"
+
+      - name: Test before releasing
+        run: |
+          python3 tools/validate_data.py
+          godot --headless --path . --import
+          godot --headless --path . -s res://tests/test_core.gd
+
+      # Godot signs with one password for both the keystore and the key. A
+      # keystore made with the keytool command in docs/BUILD.md (PKCS12, the
+      # default) always has them equal.
+      - name: Export signed APK
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CODE: ${{ steps.version.outputs.code }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          sed -i -E "s/^version\/code=.*/version\/code=$CODE/; s/^version\/name=.*/version\/name=\"$VERSION\"/" export_presets.cfg
+          grep -E "^version/(code|name)=" export_presets.cfg
+          mkdir -p dist
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.jks" \
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER="$KEY_ALIAS" \
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$KEYSTORE_PASSWORD" \
+            godot --headless --path . --export-release "Android" "dist/jianghu-chain-$VERSION.apk"
+          rm "$RUNNER_TEMP/release.jks"
+          test -s "dist/jianghu-chain-$VERSION.apk"
+
+      - name: Check the APK is signed with the release key
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          sdk="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          apksigner="$(ls -d "$sdk"/build-tools/*/ | sort -V | tail -1)apksigner"
+          "$apksigner" verify --print-certs "dist/jianghu-chain-$VERSION.apk" | tee certs.txt
+          if grep -q "CN=Android Debug" certs.txt; then
+            echo "::error::APK is signed with a debug key, not the release key."
+            exit 1
+          fi
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: v${{ steps.version.outputs.version }}
+          body: ${{ inputs.notes }}
+          generate_release_notes: true
+          files: dist/*.apk
+          fail_on_unmatched_files: true
+
+      - name: Summary
+        run: |
+          echo "## Released v${{ steps.version.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"

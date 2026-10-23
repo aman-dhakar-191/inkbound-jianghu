@@ -1,0 +1,76 @@
+name: CI
+
+# Tests on pull requests and main, plus an unsigned test APK kept as a workflow
+# artifact. Real releases are made by the Release workflow.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check story data
+        run: python3 tools/validate_data.py
+
+      - name: Check version script
+        run: scripts/test-next-version.sh
+
+      - uses: ./.github/actions/setup-godot
+
+      - name: Import project
+        run: godot --headless --path . --import 2>&1 | tee import.log
+
+      - name: Core unit tests
+        run: godot --headless --path . -s res://tests/test_core.gd 2>&1 | tee core.log
+
+      - name: Play through Chapter 1
+        run: godot --headless --path . -s res://tests/test_playthrough.gd 2>&1 | tee playthrough.log
+
+      - name: Fail on script errors
+        run: |
+          if grep -nE "SCRIPT ERROR|Parse Error|Compile Error|Failed to load script" ./*.log; then
+            echo "::error::Godot reported script errors (see above)."
+            exit 1
+          fi
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: ./.github/actions/setup-godot
+        with:
+          android: "true"
+
+      # Signed with a throwaway debug key, so it can't update a real install.
+      - name: Export test APK
+        run: |
+          godot --headless --path . --import
+          mkdir -p dist
+          godot --headless --path . --export-debug "Android" dist/jianghu-chain-dev.apk 2>&1 | tee export.log
+          test -s dist/jianghu-chain-dev.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jianghu-chain-dev-apk
+          path: dist/*.apk
