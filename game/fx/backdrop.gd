@@ -8,7 +8,8 @@ extends Control
 
 const INK := Color("1b2428")
 const SEAL := Color("a8322d")
-const YAN_ROBE := Color("2f4a46")
+## Yan Ruo wears her sect's pale robes.
+const YAN_ROBE := Color("dfe7ea")
 const SECT_WHITE := Color("e6ecee")
 const OLD_ROBE := Color("5a4a3a")
 const GU_ROBE := Color("1b1517")
@@ -342,18 +343,18 @@ func _draw_inn() -> void:
 			var appear := clampf((_since - 0.8) / 0.5, 0.0, 1.0)
 			if appear > 0.0:
 				var gx := 330.0 - 40.0 * _ease_out(clampf((_since - 0.8) / 1.2, 0.0, 1.0))
-				var cloak := {"facing": -1.0, "color": BANDIT, "hat": true, "sword": "sabre", "arm": 0.6, "alpha": appear, "rim": Color(0.63, 0.75, 0.86, 0.35)}
+				var cloak := {"facing": -1.0, "color": BANDIT, "hat": true, "sword": "sabre", "arm": 0.6, "alpha": appear, "rim": Color(0.63, 0.75, 0.86, 0.35), "resent": 0.7}
 				cloak["sword_angle"] = -0.4
 				_person(_x(356.0), fy - 8.0 * u, h * 0.86, cloak)
 				cloak["sword_angle"] = -0.5
 				_person(_x(335.0), fy - 3.0 * u, h * 0.93, cloak)
-				_person(_x(gx), fy, h * 1.02, {"facing": -1.0, "color": GU_ROBE, "sash": SEAL, "hair": "bun", "sword": "sabre", "arm": 0.7, "sword_angle": -0.3, "alpha": appear, "skin": Color("7a5f4c")})
+				_person(_x(gx), fy, h * 1.02, {"facing": -1.0, "color": GU_ROBE, "sash": SEAL, "hair": "bun", "sword": "sabre", "arm": 0.7, "sword_angle": -0.3, "alpha": appear, "skin": Color("7a5f4c"), "resent": 1.0})
 		"after":
 			_person(_x(55.0), fy, h * 0.92, {"sit": true, "color": OLD_ROBE, "hair": "wisp", "lean": 0.04})
 			_person(_x(120.0), fy, h, {"color": YAN_ROBE, "hair": "tail", "sword": "draw", "arm": 0.65, "sword_angle": 0.95, "lean": 0.03 + 0.015 * sin(t * 2.4), "wound": _flag("wound") == true})
 			draw_rect(Rect2(_x(300.0), gy - 70.0 * u, 50.0 * u, 84.0 * u), Color("3a3733"))
 			draw_rect(Rect2(_x(308.0), gy - 40.0 * u, 34.0 * u, 7.0 * u), Color(1.0, 0.55, 0.24, 0.5 + 0.25 * sin(t * 6.0)))
-			_person(_x(270.0), fy, h, {"facing": -1.0, "sit": true, "color": GU_ROBE, "sash": SEAL, "hair": "bun", "lean": 0.3, "arm": 1.3, "skin": Color("7a5f4c")})
+			_person(_x(270.0), fy, h, {"facing": -1.0, "sit": true, "color": GU_ROBE, "sash": SEAL, "hair": "bun", "lean": 0.3, "arm": 1.3, "skin": Color("7a5f4c"), "resent": 0.3})
 			draw_line(Vector2(_x(215.0), fy + 2.0 * u), Vector2(_x(165.0), fy + 6.0 * u), Color("c9d3d0"), 2.5 * u)
 		"duel":
 			_draw_duel(fy, h, u)
@@ -504,7 +505,7 @@ func _draw_duel(fy: float, h: float, u: float) -> void:
 			draw_line(Vector2(gu_x + 40.0 * u, fy + 4.0 * u), Vector2(gu_x + 90.0 * u, fy + 8.0 * u), Color("c9d3d0"), 2.5 * u)
 
 	_person(yan_x + yp["dx"], fy, h, {"color": YAN_ROBE, "hair": "tail", "sword": "draw", "arm": yp["arm"], "sword_angle": yp["sword"], "lean": yp["lean"], "letter": true, "wound": yan_wound})
-	_person(gu_x + gp["dx"], fy, h, {"facing": -1.0, "color": GU_ROBE, "sash": SEAL, "hair": "bun", "sword": gu_sword, "sit": gu_sit, "arm": gp["arm"], "sword_angle": gp["sword"], "lean": gp["lean"], "skin": Color("7a5f4c")})
+	_person(gu_x + gp["dx"], fy, h, {"facing": -1.0, "color": GU_ROBE, "sash": SEAL, "hair": "bun", "sword": gu_sword, "sit": gu_sit, "arm": gp["arm"], "sword_angle": gp["sword"], "lean": gp["lean"], "skin": Color("7a5f4c"), "resent": 1.0 if _duel_links < 0 else 0.3})
 	if sword_fly >= 0.0:
 		var s := sword_fly
 		var pos := Vector2(gu_x + 10.0 * u + s * 150.0 * u, fy - h * 0.6 - 90.0 * u * sin(PI * s) + 70.0 * u * s * s)
@@ -553,7 +554,7 @@ func _draw_particles() -> void:
 ## Returns the front hand's position, for effects like embers.
 ## Options: facing, sit, color, rim, sash, skin, hair (tail, bun, wisp, long),
 ## ribbon, hat, arm, sword (draw, sheath, sabre), sword_angle, lean, alpha,
-## walk, windy, wound, letter, paper, pole.
+## walk, windy, wound, letter, paper, pole, resent (0-1 dark mist).
 func _person(x: float, fy: float, h: float, o: Dictionary = {}) -> Vector2:
 	var f: float = o.get("facing", 1.0)
 	var sit: bool = o.get("sit", false)
@@ -573,6 +574,10 @@ func _person(x: float, fy: float, h: float, o: Dictionary = {}) -> Vector2:
 	# Mirror with scale, then lean. Rotation is flipped with the scale so a
 	# positive lean always tips the figure forward.
 	draw_set_transform(_offset + Vector2(x, fy), lean * f, Vector2(f, 1.0))
+
+	var resent: float = o.get("resent", 0.0)
+	if resent > 0.0:
+		_resentment(h, resent * alpha)
 
 	if sit:
 		draw_polyline(PackedVector2Array([Vector2(0, hip_y), Vector2(h * 0.2, hip_y + h * 0.03), Vector2(h * 0.2, -h * 0.01)]), col, h * 0.085, true)
@@ -594,7 +599,9 @@ func _person(x: float, fy: float, h: float, o: Dictionary = {}) -> Vector2:
 	robe.append_array(_quad(Vector2(h * 0.12, sh_y), Vector2(h * 0.17, mid), Vector2(h * 0.21 + sw, hem), 6))
 	robe.append_array(_quad(Vector2(-h * 0.21 + sw, hem), Vector2(-h * 0.17, mid), Vector2(-h * 0.12, sh_y), 6))
 	draw_colored_polygon(robe, col)
-	var rim: Color = o.get("rim", Color(0.94, 0.75, 0.43, 0.35))
+	# Pale robes get an ink outline so they read against mist and sky.
+	var pale := (col.r + col.g + col.b) / 3.0 > 0.6
+	var rim: Color = o.get("rim", Color(INK, 0.6) if pale else Color(0.94, 0.75, 0.43, 0.35))
 	rim.a *= alpha
 	var outline := robe.duplicate()
 	outline.append(robe[0])
@@ -675,6 +682,14 @@ func _person(x: float, fy: float, h: float, o: Dictionary = {}) -> Vector2:
 
 	draw_set_transform(_offset)
 	return Vector2(x, fy) + Vector2(f * hand.x, hand.y).rotated(lean * f)
+
+
+## Resentful energy: dark mist rising off a figure, drawn in its local space.
+func _resentment(h: float, strength: float) -> void:
+	for i in 7:
+		var q := fposmod(_time * 0.35 + i / 7.0, 1.0)
+		var p := Vector2(sin(_time * 1.3 + i * 1.7) * h * 0.22, -h * 0.1 - q * h * 0.9)
+		draw_circle(p, h * (0.05 + 0.05 * q), Color(0.16, 0.07, 0.2, 0.45 * (1.0 - q) * strength))
 
 
 # ---------------------------------------------------------------- helpers
